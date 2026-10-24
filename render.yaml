@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: worklog-backend
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    buildCommand: ""
+    startCommand: "node server.js"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3001"
+    disk:
+      name: data
+      mountPath: /app/data
+      sizeGB: 1
