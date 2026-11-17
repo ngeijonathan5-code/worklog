@@ -1,19 +1,20 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const db = require('../db');
-const { generateToken } = require('../middleware/auth');
+const { authenticateToken, generateToken, requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
 // Login
 router.post('/login', (req, res) => {
   const { name, password } = req.body;
+  const normalizedName = typeof name === 'string' ? name.trim() : '';
 
-  if (!name || !password) {
+  if (!normalizedName || !password) {
     return res.status(400).json({ error: 'Name and password required' });
   }
 
-  const user = db.prepare('SELECT * FROM users WHERE name = ?').get(name);
+  const user = db.prepare('SELECT * FROM users WHERE LOWER(name) = LOWER(?)').get(normalizedName);
   if (!user) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
@@ -31,7 +32,7 @@ router.post('/login', (req, res) => {
 });
 
 // Register (admin only - for creating staff accounts)
-router.post('/register', (req, res) => {
+router.post('/register', authenticateToken, requireAdmin, (req, res) => {
   const { email, password, name, role } = req.body;
 
   if (!email || !password || !name || !role) {
@@ -58,9 +59,8 @@ router.post('/register', (req, res) => {
 });
 
 // Get current user
-router.get('/me', (req, res) => {
-  // This will be protected by authenticateToken middleware
-  res.json({ user: req.user });
+router.get('/me', authenticateToken, (req, res) => {
+  res.json({ user: { id: req.user.id, email: req.user.email, name: req.user.name, role: req.user.role } });
 });
 
 module.exports = router;

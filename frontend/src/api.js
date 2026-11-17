@@ -1,11 +1,10 @@
-// API Base URL - use environment variable in production, fallback to /api for local dev
 const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 
 async function request(endpoint, options = {}) {
   const token = localStorage.getItem('token');
   const headers = {
     'Content-Type': 'application/json',
-    ...(token && { Authorization: `Bearer ${token}` }),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...options.headers,
   };
 
@@ -14,23 +13,24 @@ async function request(endpoint, options = {}) {
     headers,
   });
 
-  const data = await response.json();
+  const contentType = response.headers.get('content-type') || '';
+  const text = await response.text();
+  const data = text && contentType.includes('application/json') ? JSON.parse(text) : text;
 
   if (!response.ok) {
-    throw new Error(data.error || 'Request failed');
+    const message = typeof data === 'string' ? data : data?.error || 'Request failed';
+    throw new Error(message);
   }
 
-  return data;
+  return data || null;
 }
 
-// Auth API
 export const authApi = {
   login: (name, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ name, password }) }),
   register: (data) => request('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
   me: () => request('/auth/me'),
 };
 
-// Work Logs API
 export const worklogApi = {
   list: (params = {}) => {
     const query = new URLSearchParams(params).toString();
@@ -42,7 +42,6 @@ export const worklogApi = {
   delete: (id) => request(`/worklogs/${id}`, { method: 'DELETE' }),
 };
 
-// Admin API
 export const adminApi = {
   getUsers: () => request('/admin/users'),
   createUser: (data) => request('/admin/users', { method: 'POST', body: JSON.stringify(data) }),
@@ -57,15 +56,24 @@ export const adminApi = {
     const query = new URLSearchParams(params).toString();
     return request(`/admin/stats${query ? `?${query}` : ''}`);
   },
-  export: (params = {}) => {
+  export: async (params = {}) => {
     const query = new URLSearchParams(params).toString();
-    return fetch(`${API_BASE}/admin/export${query ? `?${query}` : ''}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-    }).then(r => r.blob());
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE}/admin/export${query ? `?${query}` : ''}`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(message || 'Export failed');
+    }
+
+    return response.blob();
   },
 };
 
-// Notifications API
 export const notificationApi = {
   list: (params = {}) => {
     const query = new URLSearchParams(params).toString();
@@ -78,7 +86,6 @@ export const notificationApi = {
   getUsers: () => request('/notifications/users'),
 };
 
-// Messages API
 export const messageApi = {
   getConversations: () => request('/messages/conversations'),
   getMessages: (conversationId) => request(`/messages/conversations/${conversationId}/messages`),

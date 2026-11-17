@@ -12,12 +12,12 @@ export default function WorkLogPage() {
     hours: '',
     task: '',
     description: '',
+    status: 'pending',
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  // Fetch existing log if editing
   useEffect(() => {
     if (isEditing) {
       const fetchLog = async () => {
@@ -29,6 +29,7 @@ export default function WorkLogPage() {
             hours: log.hours,
             task: log.task,
             description: log.description || '',
+            status: log.status || 'pending',
           });
         } catch (err) {
           setError(err.message);
