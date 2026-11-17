@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNotifications } from '../contexts/NotificationContext';
+import { notificationApi } from '../api.js';
 
 function formatDate(dateString) {
   const date = new Date(dateString);
@@ -35,17 +36,11 @@ export default function NotificationBar() {
   const [users, setUsers] = useState([]);
   const dropdownRef = useRef(null);
 
-  // Fetch users for admin compose
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const data = await fetch('/api/notifications/users', {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-        });
-        if (data.ok) {
-          const userList = await data.json();
-          setUsers(userList);
-        }
+        const userList = await notificationApi.getUsers();
+        setUsers(userList);
       } catch (error) {
         console.error('Failed to fetch users:', error);
       }
@@ -53,7 +48,6 @@ export default function NotificationBar() {
     fetchUsers();
   }, []);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -75,7 +69,7 @@ export default function NotificationBar() {
     setComposeLoading(true);
     try {
       await createNotification({
-        recipientId: composeData.isGlobal ? undefined : parseInt(composeData.recipientId),
+        recipientId: composeData.isGlobal ? undefined : parseInt(composeData.recipientId, 10),
         title: composeData.title,
         message: composeData.message,
         type: composeData.type,
@@ -94,7 +88,6 @@ export default function NotificationBar() {
 
   return (
     <div className="notification-bar" ref={dropdownRef}>
-      {/* Notification Bell Button */}
       <button
         className={`notification-trigger ${unreadCount > 0 ? 'has-unread' : ''}`}
         onClick={() => setIsOpen(!isOpen)}
@@ -104,7 +97,6 @@ export default function NotificationBar() {
         {unreadCount > 0 && <span className="unread-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}
       </button>
 
-      {/* Dropdown Panel */}
       {isOpen && (
         <div className="notification-dropdown">
           <div className="notification-header">
@@ -117,7 +109,6 @@ export default function NotificationBar() {
             </div>
           </div>
 
-          {/* Compose Form */}
           {showCompose && (
             <form className="compose-form" onSubmit={handleComposeSubmit}>
               <div className="form-group">
@@ -188,7 +179,6 @@ export default function NotificationBar() {
             </form>
           )}
 
-          {/* Notifications List */}
           <div className="notification-list">
             {notifications.length === 0 ? (
               <div className="empty-state">No notifications yet</div>

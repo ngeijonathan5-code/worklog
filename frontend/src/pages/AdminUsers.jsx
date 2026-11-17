@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { adminApi } from '../api.js';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function AdminUsers() {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -50,7 +52,6 @@ export default function AdminUsers() {
 
     try {
       if (editingUser) {
-        // For editing, only send name and role (password optional)
         const { name, role } = formData;
         await adminApi.updateUser(editingUser.id, { name, role });
       } else {
@@ -111,7 +112,7 @@ export default function AdminUsers() {
                       className="btn-icon danger"
                       onClick={() => handleDelete(user.id)}
                       title="Delete"
-                      disabled={user.id === parseInt(localStorage.getItem('userId') || '0')}
+                      disabled={user.id === currentUser?.id}
                     >🗑️</button>
                   </div>
                 </td>
@@ -121,7 +122,6 @@ export default function AdminUsers() {
         </table>
       </div>
 
-      {/* Modal */}
       {showModal && (
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal" onClick={e => e.stopPropagation()}>
